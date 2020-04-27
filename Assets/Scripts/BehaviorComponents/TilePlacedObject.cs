@@ -4,8 +4,8 @@ using UnityEngine.Tilemaps;
 
 public class TilePlacedObject : MonoBehaviour
 {
-    public Tilemap Tilemap => tilemap;
-    private Tilemap tilemap;
+    public IMap Tilemap => tilemap;
+    private IMap tilemap;
 
     public Vector3Int LogicalPosition => GridSpaceConversion.GetLogicalSpaceFromGridSpace(
         tilemap?.WorldToCell(gameObject.transform.localPosition) ?? Vector3Int.zero, 
@@ -14,6 +14,6 @@ public class TilePlacedObject : MonoBehaviour
 
     public void Awake()
     {
-        tilemap = GetComponentInParent<Tilemap>();
+        tilemap = new Map(GetComponentInParent<Tilemap>());
     }
 }

@@ -23,10 +23,10 @@ public class LogicalCellGraph
         return indexedCells[x, y];
     }
 
-    public static LogicalCellGraph BuildCellGraph(Tilemap tilemap, IEnumerable<Vector3Int> gateLocations)
+    public static LogicalCellGraph BuildCellGraph(IMap tilemap, IEnumerable<Vector3Int> gateLocations)
     {
         LogicalCellGraph graph = new LogicalCellGraph();
-        var logicalSize = tilemap.cellBounds.size / 2;
+        var logicalSize = tilemap.CellBounds.size / 2;
         var sizeX = logicalSize.x;
         var sizeY = logicalSize.y;
 

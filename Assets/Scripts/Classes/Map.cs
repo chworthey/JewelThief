@@ -2,37 +2,34 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-namespace Assets.Scripts.Classes
+class Map : IMap
 {
-    class Map : IMap
+    public BoundsInt CellBounds => map.cellBounds;
+
+    private readonly Tilemap map;
+
+    public Map(Tilemap map)
     {
-        public BoundsInt CellBounds => map.cellBounds;
+        this.map = map;
+    }
 
-        private Tilemap map;
+    public void Activate()
+    {
+        map.gameObject.SetActive(true);
+    }
 
-        public Map(Tilemap map)
-        {
-            this.map = map;
-        }
+    public void Deactivate()
+    {
+        map.gameObject.SetActive(false);
+    }
 
-        public void Activate()
-        {
-            map.gameObject.SetActive(true);
-        }
+    public Color GetColor(Vector3Int location)
+    {
+        return map.GetColor(location);
+    }
 
-        public void Deactivate()
-        {
-            map.gameObject.SetActive(false);
-        }
-
-        public Color GetColor(Vector3Int location)
-        {
-            return map.GetColor(location);
-        }
-
-        public Vector3Int WorldToCell(Vector3 worldPosition)
-        {
-            return map.WorldToCell(worldPosition);
-        }
+    public Vector3Int WorldToCell(Vector3 worldPosition)
+    {
+        return map.WorldToCell(worldPosition);
     }
 }

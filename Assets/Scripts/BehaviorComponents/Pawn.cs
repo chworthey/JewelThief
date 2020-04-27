@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(TilePlacedObject))]
-public class Pawn : MonoBehaviour, IGameEventListener
+public class Pawn : MonoBehaviour, IGameEventListener, IPawn
 {
     public GameObject GameController;
     private GameController controller;
@@ -11,7 +11,9 @@ public class Pawn : MonoBehaviour, IGameEventListener
 
     private Queue<Vector3Int> currentMotionPath = new Queue<Vector3Int>();
 
-    public Vector3Int CurrentLogicalPosition { get; private set; }
+    public Vector3Int LogicalLocation => logicalLocation;
+    private Vector3Int logicalLocation;
+
     public bool IsPlayer = false;
 
     private TilePlacedObject tilePlacedComponent;
@@ -19,7 +21,7 @@ public class Pawn : MonoBehaviour, IGameEventListener
     void Start()
     {
         tilePlacedComponent = GetComponent<TilePlacedObject>();
-        CurrentLogicalPosition = tilePlacedComponent.LogicalPosition;
+        logicalLocation = GetComponent<TilePlacedObject>().LogicalPosition;
         controller = GameController.GetComponent<GameController>();
         animator = GetComponent<Animator>();
         controller.RegisterEventListener(this);
@@ -48,7 +50,7 @@ public class Pawn : MonoBehaviour, IGameEventListener
         {
             var nextPosLogical = currentMotionPath.Dequeue();
 
-            if (nextPosLogical == CurrentLogicalPosition)
+            if (nextPosLogical == LogicalLocation)
             {
                 continue;
             }
@@ -59,20 +61,20 @@ public class Pawn : MonoBehaviour, IGameEventListener
                   tilePlacedComponent.Tilemap);
 
                 float angle = 180.0f;
-                if (nextPosLogical.x > CurrentLogicalPosition.x)
+                if (nextPosLogical.x > LogicalLocation.x)
                 {
                     angle = 90.0f;
                 }
-                else if (nextPosLogical.x < CurrentLogicalPosition.x)
+                else if (nextPosLogical.x < LogicalLocation.x)
                 {
                     angle = -90.0f;
                 }
-                else if (nextPosLogical.y > CurrentLogicalPosition.y)
+                else if (nextPosLogical.y > LogicalLocation.y)
                 {
                     angle = 0.0f;
                 }
 
-                CurrentLogicalPosition = nextPosLogical;
+                logicalLocation = nextPosLogical;
                 gameObject.transform.localPosition = nextPosWorld;
                 gameObject.transform.localRotation = Quaternion.AngleAxis(angle, Vector3.back) * Quaternion.Euler(-90.0f, 0.0f, 0.0f);
                 break;
@@ -80,11 +82,25 @@ public class Pawn : MonoBehaviour, IGameEventListener
         }
     }
 
-    public void PlayerAddMotionPath(LogicalPath path)
+    public void PushMotionPath(LogicalPath path)
     {
         foreach (var cell in path.Path)
         {
             currentMotionPath.Enqueue(new Vector3Int(cell.x, cell.y, 0));
         }
+    }
+
+    public void ExitUnlocked()
+    {
+    }
+
+    public void Activate()
+    {
+        gameObject.SetActive(true);
+    }
+
+    public void Deactivate()
+    {
+        gameObject.SetActive(false);
     }
 }

@@ -49,7 +49,7 @@ static class LineElements
         };
     }
 
-    public static IEnumerable<SegmentProperties> SegmentsFromPath(LogicalPath path, Tilemap tilemap)
+    public static IEnumerable<SegmentProperties> SegmentsFromPath(LogicalPath path, IMap tilemap)
     {
         var points = new List<Vector3>();
         foreach (var cell in path.Path)

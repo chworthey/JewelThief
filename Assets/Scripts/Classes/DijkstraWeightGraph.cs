@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-class DijkstraWeightGraph
+public class DijkstraWeightGraph
 {
     private Dictionary<LogicalCell, int> distancesByCell = new Dictionary<LogicalCell, int>();
     private Dictionary<LogicalCell, LogicalCell> paths = new Dictionary<LogicalCell, LogicalCell>();

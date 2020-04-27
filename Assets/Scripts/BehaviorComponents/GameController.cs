@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 delegate void TickerFunction();
 
-public class GameController : MonoBehaviour
+public class GameController : MonoBehaviour, ILevelState
 {
     public GameObject[] Maps;
     public GameObject LevelCounter;
@@ -15,35 +15,36 @@ public class GameController : MonoBehaviour
     public GameObject WinOverlay;
     public GameObject LoseOverlay;
 
-    private Tilemap tilemap = null;
+    private IMap tilemap = null;
     private LogicalCellGraph cellGraph = null;
-    private DijkstraWeightGraph playerWeightGraph = null;
-    private DijkstraWeightGraph enemyWeightGraph = null;
+    private AIBrain enemyBrain = null;
 
     private MeshRenderer meshRenderer;
     private MeshFilter meshFilter;
 
-    private Vector3Int lastMouseLogicalPosition;
-    private Vector3Int pendingTarget;
-    private bool pendingTargetActive = false;
-    private LogicalPath pendingPath = null;
-    private Vector3Int lastCommittedCell;
-    private bool hasCommitedCell = false;
-    private Queue<Vector3Int> commandCheckpoints = new Queue<Vector3Int>();
-    private IEnumerable<SegmentProperties> pendingCommandPathLineSegments = new List<SegmentProperties>();
-    private IEnumerable<SegmentProperties> pendingSelectionLineSegments = new List<SegmentProperties>();
+    private PlayerController playerController = null;
 
-    private int currentlevel = 0;
-    private int playerScore = 0;
-    private bool exitUnlocked => items.Count == 1;
-    private bool gameOver = false;
+    private Vector3Int lastMouseLogicalPosition;
+
+    public IEnumerable<IItem> ActiveItems => items.Select(i => i.Value);
+    public IEnumerable<IGate> ActiveGates => gates;
+    public IPawn Player { get; private set; }
+    public IPawn Enemy { get; private set; }
+    public IMap Map => throw new System.NotImplementedException();
+    public IGameStats GameStats => stats;
+    private readonly GameStats stats = new GameStats
+    {
+        CurrentLevel = 0,
+        ExitUnlocked = false,
+        GameOver = false,
+        PlayerScore = 0
+    };
+
+    public IItem ExitItem { get; private set; } = null;
 
     private List<IGameEventListener> listeners = new List<IGameEventListener>();
-    private Pawn player = null;
-    private Pawn enemy = null;
-    private Dictionary<Vector3Int, Item> items = new Dictionary<Vector3Int, Item>();
-    private List<Gate> gates = new List<Gate>();
-    private Item exit = null;
+    private Dictionary<Vector3Int, IItem> items = new Dictionary<Vector3Int, IItem>();
+    private List<IGate> gates = new List<IGate>();
 
     private bool mapNeedsRebuild = false;
     private bool needsMouseUpdate = false;
@@ -52,21 +53,15 @@ public class GameController : MonoBehaviour
     {
         tilemap = null;
         cellGraph = null;
-        playerWeightGraph = null;
-        enemyWeightGraph = null;
-        pendingTargetActive = false;
-        pendingPath = null;
-        hasCommitedCell = false;
-        commandCheckpoints = new Queue<Vector3Int>();
-        pendingCommandPathLineSegments = new List<SegmentProperties>();
-        pendingSelectionLineSegments = new List<SegmentProperties>();
+        playerController = null;
         listeners = new List<IGameEventListener>();
-        player = null;
-        enemy = null;
-        items = new Dictionary<Vector3Int, Item>();
-        gates = new List<Gate>();
-        exit = null;
+        Player = null;
+        Enemy = null;
+        items = new Dictionary<Vector3Int, IItem>();
+        gates = new List<IGate>();
         mapNeedsRebuild = true;
+        ExitItem = null;
+        GameStats.ExitUnlocked = false;
     }
 
     public void RegisterEventListener(IGameEventListener listener)
@@ -76,44 +71,45 @@ public class GameController : MonoBehaviour
 
     public void RegisterPlayer(Pawn player)
     {
-        this.player = player;
+        Player = player;
+        playerController = new PlayerController(player);
     }
 
     public void RegisterEnemy(Pawn enemy)
     {
-        this.enemy = enemy;
+        Enemy = enemy;
+        enemyBrain = new AIBrain(enemy);
     }
 
-    public void RegisterItem(Item item)
+    public void RegisterItem(IItem item)
     {
-        items[item.GetComponent<TilePlacedObject>().LogicalPosition] = item;
-        if (item.TriggerNextLevel)
+        items[item.LogicalLocation] = item;
+        if (item.EndsLevel)
         {
-            exit = item;
-            SetExitColorIndicator();
+            ExitItem = item;
         }
     }
 
-    public void RegisterGate(Gate gate)
+    public void RegisterGate(IGate gate)
     {
         gates.Add(gate);
         mapNeedsRebuild = true;
     }
 
-    IEnumerable<Vector3Int> GetGateLogicalPositions()
+    private IEnumerable<Vector3Int> GetGateLogicalPositions()
     {
         if (gates == null)
         {
             return new List<Vector3Int>();
         }
 
-        return gates.Select(g => g.GetComponent<TilePlacedObject>().LogicalPosition);
+        return gates.Select(g => g.LogicalLocation);
     }
 
     void Start()
     {
-        tilemap = Maps[currentlevel].GetComponent<Tilemap>();
-        tilemap.gameObject.SetActive(true);
+        tilemap = new Map(Maps[stats.CurrentLevel].GetComponent<Tilemap>());
+        tilemap.Activate();
 
         mapNeedsRebuild = true;
 
@@ -127,99 +123,9 @@ public class GameController : MonoBehaviour
         StartCoroutine(aiTickCoroutine);
     }
 
-    void SetExitColorIndicator()
-    {
-        if (exit != null)
-        {
-            exit.GetComponent<SpriteRenderer>().color = exitUnlocked ? Color.white : new Color(0.2f, 0.2f, 0.2f, 1.0f);
-        }
-    }
-
-    void OnMouseMove(Vector3Int mouseLogicalSpace, bool offGrid)
-    {
-        pendingCommandPathLineSegments = new List<SegmentProperties>();
-        pendingSelectionLineSegments = new List<SegmentProperties>();
-
-        pendingTargetActive = false;
-        pendingPath = null;
-
-        if (playerWeightGraph == null)
-        {
-            RebuildPlayerGraph();
-        }
-
-        if (playerWeightGraph == null || offGrid)
-        {
-            return;
-        }
-
-        var targetCell = cellGraph.LookupCell(mouseLogicalSpace.x, mouseLogicalSpace.y);
-        var (accessible, path) = playerWeightGraph.LookupShortestPath(targetCell);
-
-        var selectedCellWorldSpace = GridSpaceConversion.GetWorldSpaceFromLogical(mouseLogicalSpace, tilemap);
-        Color boxColor = Color.white;
-        if (accessible)
-        {
-            pendingCommandPathLineSegments = pendingCommandPathLineSegments.Concat(LineElements.SegmentsFromPath(path, tilemap));
-            pendingTarget = targetCell.Loc;
-            pendingTargetActive = true;
-            pendingPath = path;
-        }
-        else
-        {
-            boxColor = Color.red;
-            pendingSelectionLineSegments = pendingSelectionLineSegments.Concat(LineElements.XSegments(selectedCellWorldSpace, boxColor));
-        }
-        pendingSelectionLineSegments = pendingSelectionLineSegments.Concat(LineElements.SquareSelectionSegments(selectedCellWorldSpace, boxColor));
-    }
-
-    void RebuildEnemyGraph()
-    {
-        if (enemy == null)
-        {
-            return;
-        }
-
-        var enemyPos = enemy.CurrentLogicalPosition;
-        var enemyCell = cellGraph.LookupCell(enemyPos.x, enemyPos.y);
-
-        enemyWeightGraph = DijkstraWeightGraph.BuildDijkstraWeightGraph(
-            cellGraph,
-            enemyCell,
-            maxDistance: 0,
-            allowNeighborTeleportation: true);
-    }
-
-    void RebuildPlayerGraph()
-    {
-        if (player == null)
-        {
-            return;
-        }
-
-        LogicalCell commandPosition = null;
-        if (hasCommitedCell)
-        {
-            commandPosition = cellGraph.LookupCell(lastCommittedCell.x, lastCommittedCell.y);
-        }
-        else
-        {
-            var playerPos = player.CurrentLogicalPosition;
-            var playerCell = cellGraph.LookupCell(playerPos.x, playerPos.y);
-            commandPosition = playerCell;
-        }
-        playerWeightGraph = DijkstraWeightGraph.BuildDijkstraWeightGraph(
-                cellGraph, 
-                commandPosition, 
-                maxDistance: 6, 
-                allowNeighborTeleportation: true);
-
-        needsMouseUpdate = true;
-    }
-
     void Update()
     {
-        if (gameOver)
+        if (GameStats.GameOver)
         {
             return;
         }
@@ -227,53 +133,44 @@ public class GameController : MonoBehaviour
         if (mapNeedsRebuild)
         {
             cellGraph = LogicalCellGraph.BuildCellGraph(tilemap, GetGateLogicalPositions());
-            RebuildPlayerGraph();
-            RebuildEnemyGraph();
+            playerController?.RebuildGraph(cellGraph);
+            needsMouseUpdate = true;
+            enemyBrain?.RebuildGraph(cellGraph);
             mapNeedsRebuild = false;
         }
 
-        IEnumerable<SegmentProperties> pendingLineSegments = new List<SegmentProperties>();
         var mouseSceenSpace = Input.mousePosition;
         var mouseWorldSpace = Camera.main.ScreenToWorldPoint(mouseSceenSpace);
         var mouseGridSpace = tilemap.WorldToCell(mouseWorldSpace);
         var mouseLogicalSpace = GridSpaceConversion.GetLogicalSpaceFromGridSpace(mouseGridSpace, tilemap);
 
-        bool onGrid = mouseLogicalSpace.x >= 0 && mouseLogicalSpace.y >= 0 && mouseLogicalSpace.x < cellGraph.SizeX && mouseLogicalSpace.y < cellGraph.SizeY;
-
-        if (mouseLogicalSpace != lastMouseLogicalPosition || needsMouseUpdate)
+        if (playerController != null)
         {
-            lastMouseLogicalPosition = mouseLogicalSpace;
-            OnMouseMove(mouseLogicalSpace, !onGrid);
+            bool onGrid = mouseLogicalSpace.x >= 0 && mouseLogicalSpace.y >= 0 && mouseLogicalSpace.x < cellGraph.SizeX && mouseLogicalSpace.y < cellGraph.SizeY;
+
+            if (mouseLogicalSpace != lastMouseLogicalPosition || needsMouseUpdate)
+            {
+                needsMouseUpdate = false;
+                lastMouseLogicalPosition = mouseLogicalSpace;
+                playerController.OnMouseMove(mouseLogicalSpace, !onGrid, cellGraph, tilemap);
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                playerController.OnMouseClick(cellGraph);
+                playerController.RebuildGraph(cellGraph);
+                needsMouseUpdate = true;
+            }
+            var mesh = playerController.GenerateLineMesh(tilemap);
+            meshFilter.mesh = mesh;
         }
-
-        if (Input.GetMouseButtonDown(0) && pendingTargetActive && pendingPath != null && pendingTarget != lastCommittedCell)
-        {
-            lastCommittedCell = pendingTarget;
-            hasCommitedCell = true;
-            commandCheckpoints.Enqueue(pendingTarget);
-            player.PlayerAddMotionPath(pendingPath);
-            pendingCommandPathLineSegments = new List<SegmentProperties>();
-
-            RebuildPlayerGraph();
-        }
-
-        foreach (var c in commandCheckpoints)
-        {
-            var worldSpace = GridSpaceConversion.GetWorldSpaceFromLogical(c, tilemap);
-            var square = LineElements.SquareSelectionSegments(worldSpace, Color.grey);
-            pendingLineSegments = pendingLineSegments.Concat(square);
-        }
-
-        pendingLineSegments = pendingLineSegments.Concat(pendingCommandPathLineSegments).Concat(pendingSelectionLineSegments);
-
-        meshFilter.mesh = LineMesh.GenerateLineMesh(pendingLineSegments);
     }
 
     void OnGameOver(bool victory)
     {
-        gameOver = true;
+        GameStats.GameOver = true;
         meshRenderer.enabled = false;
-        tilemap.gameObject.SetActive(false);
+        tilemap.Deactivate();
         if (victory)
         {
             WinOverlay.SetActive(true);
@@ -286,119 +183,54 @@ public class GameController : MonoBehaviour
 
     void RevealNextLevel()
     {
-        tilemap.gameObject.SetActive(false);
+        tilemap.Deactivate();
 
-        if (currentlevel == Maps.Length - 1)
+        if (GameStats.CurrentLevel == Maps.Length - 1)
         {
             OnGameOver(true);
         }
         else
         {
-            ++currentlevel;
-            LevelCounter.GetComponent<Text>().text = currentlevel.ToString("D2");
+            ++GameStats.CurrentLevel;
+            LevelCounter.GetComponent<Text>().text = GameStats.CurrentLevel.ToString("D2");
 
             Restart();
 
-            tilemap = Maps[currentlevel].GetComponent<Tilemap>();
-            tilemap.gameObject.SetActive(true);
+            tilemap = new Map(Maps[GameStats.CurrentLevel].GetComponent<Tilemap>());
+            tilemap.Activate();
             cellGraph = LogicalCellGraph.BuildCellGraph(tilemap, GetGateLogicalPositions());
         }
     }
 
-    LogicalCell FindAIGoal()
-    {
-        int closestItemDistance = int.MaxValue;
-        LogicalCell closestItemCell = null;
-        foreach (Item i in items.Values)
-        {
-            if ((!exitUnlocked && i.TriggerNextLevel) || (exitUnlocked && !i.TriggerNextLevel))
-            {
-                continue;
-            }
-
-            var logicalPosition = i.GetComponent<TilePlacedObject>().LogicalPosition;
-            var cell = cellGraph.LookupCell(logicalPosition.x, logicalPosition.y);
-            var (accessible, distance) = enemyWeightGraph.LookupDistance(cell);
-
-            if (!accessible)
-            {
-                continue;
-            }
-
-            if (distance < closestItemDistance)
-            {
-                closestItemDistance = distance;
-                closestItemCell = cell;
-            }
-        }
-
-        return closestItemCell;
-    }
-
     void OnAITick()
     {
-        if (cellGraph == null)
-        {
-            return;
-        }
-
-        RebuildEnemyGraph();
-        
-        if (enemy == null || enemyWeightGraph == null)
-        {
-            return;
-        }
-        var goal = FindAIGoal();
-        if (goal == null)
-        {
-            return;
-        }
-
-        var (accessible, path) = enemyWeightGraph.LookupShortestPath(goal);
-        if (!accessible)
-        {
-            return;
-        }
-
-        if (!path.Path.Any())
-        {
-            return;
-        }
-
-        var nextCell = path.Path.Skip(1).Take(1).FirstOrDefault();
-        if (nextCell != null)
-        {
-            var truncatedPath = new LogicalPath();
-            truncatedPath.PrependPath(nextCell);
-            enemy.PlayerAddMotionPath(truncatedPath);
-        }
+        enemyBrain?.Tick(cellGraph, this);
     }
 
-    void OnItemPickup(Item item, Vector3Int itemPos, bool pickedUpByPlayer)
+    void OnItemPickup(IItem item, Vector3Int itemPos, bool pickedUpByPlayer)
     {
         items.Remove(itemPos);
 
         if (pickedUpByPlayer)
         {
-            playerScore += item.PointValue;
+            GameStats.PlayerScore += item.PointValue;
             var score = ScoreCounter.GetComponent<Text>();
-            score.text = playerScore.ToString("D6");
+            score.text = GameStats.PlayerScore.ToString("D6");
         }
 
-        item.gameObject.SetActive(false);
-        bool triggerNextLevel = item.TriggerNextLevel;
+        bool triggerNextLevel = item.EndsLevel;
 
-        
-        if (item.Unlocks != null)
+
+        if (item.OpensGate != null)
         {
-            var gate = item.Unlocks.GetComponent<Gate>();
+            var gate = item.OpensGate;
             gates.Remove(gate);
-            gate.gameObject.SetActive(false);
-            Destroy(gate);
+            gate.Deactivate();
             mapNeedsRebuild = true;
         }
 
-        Destroy(item);
+        item.Deactivate();
+
         if (triggerNextLevel)
         {
             if (pickedUpByPlayer)
@@ -410,55 +242,58 @@ public class GameController : MonoBehaviour
                 OnGameOver(false);
             }
         }
+
+        if (items.Count == 1 && !GameStats.ExitUnlocked)
+        {
+            GameStats.ExitUnlocked = true;
+            foreach (var i in listeners)
+            {
+                i.ExitUnlocked();
+            }
+        }
     }
 
-
-    void PostLogicalTick()
+    void CollisionDetection()
     {
         if (cellGraph == null)
         {
             return;
         }
 
-        if (player != null)
+        if (Player != null && playerController != null)
         {
-            var playerPos = player.CurrentLogicalPosition;
+            var playerPos = Player.LogicalLocation;
 
-            if (commandCheckpoints.Any())
-            {
-                var firstCheckpoint = commandCheckpoints.Peek();
-                if (firstCheckpoint == playerPos)
-                {
-                    commandCheckpoints.Dequeue();
-                }
-            }
-            
             if (items.ContainsKey(playerPos))
             {
                 var item = items[playerPos];
-                if (!item.TriggerNextLevel || exitUnlocked)
+                if (!item.EndsLevel || GameStats.ExitUnlocked)
                 {
                     OnItemPickup(item, playerPos, true);
                 }
             }
         }
 
-        if (enemy != null)
+        if (Enemy != null)
         {
-            var enemyPos = enemy.CurrentLogicalPosition;
+            var enemyPos = Enemy.LogicalLocation;
 
             if (items.ContainsKey(enemyPos))
             {
                 var item = items[enemyPos];
 
-                if (!item.TriggerNextLevel || exitUnlocked)
+                if (!item.EndsLevel || GameStats.ExitUnlocked)
                 {
                     OnItemPickup(item, enemyPos, false);
                 }
             }
         }
+    }
 
-        SetExitColorIndicator();
+    void PostLogicalTick()
+    {
+        playerController?.Tick();
+        CollisionDetection();
     }
 
     private void OnLogicalTick()
@@ -472,7 +307,7 @@ public class GameController : MonoBehaviour
 
     private IEnumerator WaitAndTick(float tickTime, TickerFunction function)
     {
-        while (!gameOver)
+        while (!GameStats.GameOver)
         {
             function.Invoke();
             

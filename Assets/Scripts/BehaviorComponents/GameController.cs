@@ -46,6 +46,7 @@ public class GameController : MonoBehaviour
     private Item exit = null;
 
     private bool mapNeedsRebuild = false;
+    private bool needsMouseUpdate = false;
 
     private void Restart()
     {
@@ -138,6 +139,10 @@ public class GameController : MonoBehaviour
     {
         pendingCommandPathLineSegments = new List<SegmentProperties>();
         pendingSelectionLineSegments = new List<SegmentProperties>();
+
+        pendingTargetActive = false;
+        pendingPath = null;
+
         if (playerWeightGraph == null)
         {
             RebuildPlayerGraph();
@@ -145,8 +150,6 @@ public class GameController : MonoBehaviour
 
         if (playerWeightGraph == null || offGrid)
         {
-            pendingTargetActive = false;
-            pendingPath = null;
             return;
         }
 
@@ -210,6 +213,8 @@ public class GameController : MonoBehaviour
                 commandPosition, 
                 maxDistance: 6, 
                 allowNeighborTeleportation: true);
+
+        needsMouseUpdate = true;
     }
 
     void Update()
@@ -233,10 +238,11 @@ public class GameController : MonoBehaviour
         var mouseGridSpace = tilemap.WorldToCell(mouseWorldSpace);
         var mouseLogicalSpace = GridSpaceConversion.GetLogicalSpaceFromGridSpace(mouseGridSpace, tilemap);
 
-        if (mouseLogicalSpace != lastMouseLogicalPosition)
+        bool onGrid = mouseLogicalSpace.x >= 0 && mouseLogicalSpace.y >= 0 && mouseLogicalSpace.x < cellGraph.SizeX && mouseLogicalSpace.y < cellGraph.SizeY;
+
+        if (mouseLogicalSpace != lastMouseLogicalPosition || needsMouseUpdate)
         {
             lastMouseLogicalPosition = mouseLogicalSpace;
-            bool onGrid = mouseLogicalSpace.x >= 0 && mouseLogicalSpace.y >= 0 && mouseLogicalSpace.x < cellGraph.SizeX && mouseLogicalSpace.y < cellGraph.SizeY;
             OnMouseMove(mouseLogicalSpace, !onGrid);
         }
 
@@ -267,6 +273,7 @@ public class GameController : MonoBehaviour
     {
         gameOver = true;
         meshRenderer.enabled = false;
+        tilemap.gameObject.SetActive(false);
         if (victory)
         {
             WinOverlay.SetActive(true);

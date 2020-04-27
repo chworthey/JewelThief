@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// Represents the physical item pickup
+/// </summary>
 [RequireComponent(typeof(TilePlacedObject))]
 public class Item : MonoBehaviour, IItem, IGameEventListener
 {

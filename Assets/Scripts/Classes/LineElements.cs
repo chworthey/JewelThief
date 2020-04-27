@@ -4,10 +4,19 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Contains various utilities for building useful line diagrams
+/// </summary>
 static class LineElements
 {
     const float zPos = -0.1f;
 
+    /// <summary>
+    /// Draws a little X
+    /// </summary>
+    /// <param name="worldPos">The position of the center of the X</param>
+    /// <param name="color">The color of the line segments</param>
+    /// <returns>A list of segments that can be drawn</returns>
     public static IEnumerable<SegmentProperties> XSegments(Vector3 worldPos, Color color)
     {
         const float extent = 0.2f;
@@ -27,6 +36,12 @@ static class LineElements
         };
     }
 
+    /// <summary>
+    /// Draws a square, about the size of a logical tile
+    /// </summary>
+    /// <param name="tilePosWorld">The position of the center of the square</param>
+    /// <param name="color">The color of the line segments</param>
+    /// <returns>A list of segments that can be drawn</returns>
     public static IEnumerable<SegmentProperties> SquareSelectionSegments(Vector3 tilePosWorld, Color color)
     {
         const float squareScale = 0.8f;
@@ -49,6 +64,12 @@ static class LineElements
         };
     }
 
+    /// <summary>
+    /// Creates line segments from a logical-coordinate-based path
+    /// </summary>
+    /// <param name="path">The logical path</param>
+    /// <param name="tilemap">The map where the path originated from</param>
+    /// <returns>A list of segments that can be drawn</returns>
     public static IEnumerable<SegmentProperties> SegmentsFromPath(LogicalPath path, IMap tilemap)
     {
         var points = new List<Vector3>();

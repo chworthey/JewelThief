@@ -1,15 +1,20 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using System.Linq;
 
 namespace Tests
 {
+    /// <summary>
+    /// Holds the Unit tests for the weight graphs
+    /// </summary>
     public class DijkstraTests
     {
         const int logicalCellSize = 2;
 
+        /// <summary>
+        /// A test map with hardcoded cell values
+        /// </summary>
         class TestMap : IMap
         {
             public BoundsInt CellBounds => new BoundsInt(0, 0, 0, 4 * logicalCellSize, 4 * logicalCellSize, 0);
@@ -58,11 +63,21 @@ namespace Tests
 
         private readonly Vector3Int[] testGateLocations = new[] { new Vector3Int(2, 1, 0) };
 
+        /// <summary>
+        /// Creates the test cell graph using the test map
+        /// </summary>
+        /// <returns>The test cell graph</returns>
         private LogicalCellGraph generateTestGraph()
         {
             return LogicalCellGraph.BuildCellGraph(new TestMap(), testGateLocations);
         }
 
+        /// <summary>
+        /// Compares two vector lists, element-wise
+        /// </summary>
+        /// <param name="path1">The first vector list</param>
+        /// <param name="path2">The second vector list</param>
+        /// <returns>True if the lists have the same elements</returns>
         private bool PathsMatch(IEnumerable<Vector3Int> path1, IEnumerable<Vector3Int> path2)
         {
             var l1 = path2.Except(path1);
@@ -70,6 +85,10 @@ namespace Tests
             return !l1.Any() && !l2.Any();
         }
 
+        /// <summary>
+        /// Tests whether the cellgraph & djikstra graphs work when we don't allow teleportation
+        /// to non-adjacent cells
+        /// </summary>
         [Test]
         public void GraphWithoutTeleportRule()
         {
@@ -100,6 +119,9 @@ namespace Tests
             Assert.True(distance == expectedDistance);
         }
 
+        /// <summary>
+        /// Tests the functionality of the graphs when teleporation is allowed.
+        /// </summary>
         [Test]
         public void GraphWithTeleportRule()
         {
@@ -136,6 +158,9 @@ namespace Tests
             Assert.True(distance == expectedDistance);
         }
 
+        /// <summary>
+        /// Tests functionality of the graphs when a distance limiter is placed on the dijikstra weight graph.
+        /// </summary>
         [Test]
         public void GraphWithLimitedDistance()
         {

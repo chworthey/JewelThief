@@ -2,6 +2,9 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// A wrapper implementation for tilemap
+/// </summary>
 class Map : IMap
 {
     public BoundsInt CellBounds => map.cellBounds;

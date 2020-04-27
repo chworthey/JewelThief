@@ -1,4 +1,7 @@
 ﻿
+/// <summary>
+/// Implementation of game stats for the game.
+/// </summary>
 class GameStats : IGameStats
 {
     public int CurrentLevel { get; set; }

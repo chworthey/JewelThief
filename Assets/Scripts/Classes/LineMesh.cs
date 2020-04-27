@@ -3,33 +3,97 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+/// <summary>
+/// The style of the line segment to draw
+/// </summary>
 public enum SegmentStyle
 {
     Solid = 0,
     Dashed = 1,
 }
 
+/// <summary>
+/// The properties of a particular segment
+/// </summary>
 public struct SegmentProperties
 {
+    /// <summary>
+    /// The segment style
+    /// </summary>
     public SegmentStyle Style { get; set; }
+
+    /// <summary>
+    /// The start location (world space) of the segment
+    /// </summary>
     public Vector3 Start { get; set; }
+
+    /// <summary>
+    /// The end location (world space) of the segment
+    /// </summary>
     public Vector3 End { get; set; }
+    
+    /// <summary>
+    /// The up-vector in which the faces and normals will be facing
+    /// </summary>
     public Vector3 FacingDirection { get; set; }
+
+    /// <summary>
+    /// The width, in world space units, of the segment
+    /// </summary>
     public float Width { get; set; }
+
+    /// <summary>
+    /// The vertex colors of the line segment.
+    /// </summary>
     public Color Color { get; set; }
 }
 
+/// <summary>
+/// The class for converting segment data into a usable mesh that
+/// can be attached to a Unity mesh renderer
+/// </summary>
 public static class LineMesh
 {
+    /// <summary>
+    /// Intermediate mesh data
+    /// </summary>
     struct MeshData
     {
+        /// <summary>
+        /// The vertices to add
+        /// </summary>
         public Vector3[] Vertices { get; set; }
+
+        /// <summary>
+        /// The triangles/indices to add
+        /// </summary>
         public int[] Indices { get; set; }
+
+        /// <summary>
+        /// The normals to add
+        /// </summary>
         public Vector3[] Normals { get; set; }
+
+        /// <summary>
+        /// The UVs to add
+        /// </summary>
         public Vector2[] TexCoords { get; set; }
+
+        /// <summary>
+        /// The vertex colors to add
+        /// </summary>
         public Color[] Colors { get; set; }
     }
 
+    /// <summary>
+    /// Generates mesh data for a specific line segment
+    /// </summary>
+    /// <param name="start">The start position of the line segment</param>
+    /// <param name="end">The end position of the line segment</param>
+    /// <param name="width">The width of the line segment</param>
+    /// <param name="up">The up direction</param>
+    /// <param name="color">The color of the line segment vertex colors</param>
+    /// <returns></returns>
     private static MeshData generateSegmentData(Vector3 start, Vector3 end, float width, Vector3 up, Color color)
     {
         Vector3[] vertices;
@@ -79,6 +143,11 @@ public static class LineMesh
         return new MeshData { Vertices = vertices, Indices = indices, Normals = normals, TexCoords = texCoords, Colors = colors };
     }
 
+    /// <summary>
+    /// Converts a list of segment data into a more usable mesh.
+    /// </summary>
+    /// <param name="segments">A list of line segments</param>
+    /// <returns>A Unity mesh</returns>
     public static Mesh GenerateLineMesh(IEnumerable<SegmentProperties> segments)
     {
         Mesh mesh = new Mesh();

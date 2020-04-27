@@ -1,11 +1,17 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Computes an indexed linked list between all the cells, and the cells
+/// that are traversable to. Teleportation logic is included in here.
+/// </summary>
 public class LogicalCellGraph
 {
     private LogicalCell[,] indexedCells = null;
 
+    /// <summary>
+    /// A list of all the cells in the graph
+    /// </summary>
     public IEnumerable<LogicalCell> Cells 
     {
         get
@@ -15,14 +21,34 @@ public class LogicalCellGraph
         }
     }
 
+    /// <summary>
+    /// The X size of the logical-spaced tile grid
+    /// </summary>
     public int SizeX => indexedCells.GetLength(0);
+
+    /// <summary>
+    /// The Y size of the logical-spaced tile grid
+    /// </summary>
     public int SizeY => indexedCells.GetLength(1);
 
+    /// <summary>
+    /// Finds a cell with the given coordinates in logical space.
+    /// Warning: this can throw easily! @TODO
+    /// </summary>
+    /// <param name="x">The X coordinate</param>
+    /// <param name="y">The Y coordinate</param>
+    /// <returns>The cell at the specified coords</returns>
     public LogicalCell LookupCell(int x, int y)
     {
         return indexedCells[x, y];
     }
 
+    /// <summary>
+    /// Builds a logical cell grid from the game data
+    /// </summary>
+    /// <param name="tilemap">The game map</param>
+    /// <param name="gateLocations">The locations of all the locked doors/gates</param>
+    /// <returns>A logical cell graph which contains useful neighboring data</returns>
     public static LogicalCellGraph BuildCellGraph(IMap tilemap, IEnumerable<Vector3Int> gateLocations)
     {
         LogicalCellGraph graph = new LogicalCellGraph();

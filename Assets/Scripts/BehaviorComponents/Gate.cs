@@ -1,6 +1,9 @@
 
 using UnityEngine;
 
+/// <summary>
+/// The object representing the locked gate/door that will need a key to open
+/// </summary>
 [RequireComponent(typeof(TilePlacedObject))]
 public class Gate : MonoBehaviour, IGate
 {

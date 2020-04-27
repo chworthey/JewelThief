@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+/// <summary>
+/// Represents a pawn that can be moved along a specified path by a controller
+/// </summary>
 [RequireComponent(typeof(TilePlacedObject))]
 public class Pawn : MonoBehaviour, IGameEventListener, IPawn
 {

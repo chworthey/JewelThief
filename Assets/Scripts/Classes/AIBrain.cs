@@ -1,16 +1,34 @@
 ﻿using System.Linq;
 
+/// <summary>
+/// The controller for the enemy pawn. Includes the AI
+/// </summary>
 public class AIBrain
 {
+    /// <summary>
+    /// The closest distances to everything else
+    /// </summary>
     private DijkstraWeightGraph enemyWeightGraph = null;
 
+    /// <summary>
+    /// The controlee
+    /// </summary>
     private readonly IPawn enemyPawn = null;
 
+    /// <summary>
+    /// Constructs an AI controller with the given pawn
+    /// </summary>
+    /// <param name="pawn"></param>
     public AIBrain(IPawn pawn)
     {
         enemyPawn = pawn;
     }
 
+    /// <summary>
+    /// Should be called when the scene's graph changes
+    /// (Ie. a locked gate has been lifted)
+    /// </summary>
+    /// <param name="cellGraph">The scene graph</param>
     public void RebuildGraph(LogicalCellGraph cellGraph)
     {
         if (enemyPawn == null)
@@ -28,8 +46,18 @@ public class AIBrain
             allowNeighborTeleportation: true);
     }
 
+    /// <summary>
+    /// Ticks the AI's brain. It will move one square each tick currently.
+    /// </summary>
+    /// <param name="graph">The scene graph</param>
+    /// <param name="state">The state of the level</param>
     public void Tick(LogicalCellGraph graph, ILevelState state)
     {
+        // So on a bigger game I probably wouldn't do this,
+        // But it seems Djikstra's is performant enough to
+        // Recompute each tick!! (keep in mind, the AI's tick
+        // is only approximately once every second). If this
+        // weren't the case, I would probably go with A*.
         RebuildGraph(graph);
 
         if (enemyPawn == null || enemyWeightGraph == null)
@@ -62,6 +90,12 @@ public class AIBrain
         }
     }
 
+    /// <summary>
+    /// Finds something for the AI to seek towards (we'll go with closest)
+    /// </summary>
+    /// <param name="graph">The scene graph</param>
+    /// <param name="state">The state of the level</param>
+    /// <returns></returns>
     private LogicalCell findAIGoal(LogicalCellGraph graph, ILevelState state)
     {
         int closestItemDistance = int.MaxValue;

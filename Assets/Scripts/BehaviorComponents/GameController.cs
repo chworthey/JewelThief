@@ -21,6 +21,9 @@ public class GameController : MonoBehaviour, ILevelState
     public GameObject ScoreCounter;
     public GameObject WinOverlay;
     public GameObject LoseOverlay;
+    public AudioClip[] ItemNoises;
+    public AudioClip SirenNoise;
+    public AudioClip EndLevelNoise;
 
     // Map data
     private LogicalCellGraph cellGraph = null;
@@ -37,6 +40,9 @@ public class GameController : MonoBehaviour, ILevelState
     private Vector3Int lastMouseLogicalPosition;
     private bool mapNeedsRebuild = false; 
     private bool needsMouseUpdate = false;
+
+    // For misc sound effects
+    private AudioSource audioSource = null;
 
     // ILevelState properties containing most of the game's juicy details
     public IEnumerable<IItem> ActiveItems => items.Select(i => i.Value);
@@ -154,6 +160,8 @@ public class GameController : MonoBehaviour, ILevelState
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = new Material(Shader.Find("SimpleColorLine"));
 
+        audioSource = gameObject.GetComponent<AudioSource>();
+
         var logicalTickCoroutine = WaitAndTick(0.2f, OnLogicalTick);
         StartCoroutine(logicalTickCoroutine);
         var aiTickCoroutine = WaitAndTick(2.0f, OnAITick);
@@ -235,6 +243,7 @@ public class GameController : MonoBehaviour, ILevelState
         }
         else
         {
+            audioSource.PlayOneShot(EndLevelNoise);
             ++GameStats.CurrentLevel;
             LevelCounter.GetComponent<Text>().text = GameStats.CurrentLevel.ToString("D2");
 
@@ -269,6 +278,7 @@ public class GameController : MonoBehaviour, ILevelState
             GameStats.PlayerScore += item.PointValue;
             var score = ScoreCounter.GetComponent<Text>();
             score.text = GameStats.PlayerScore.ToString("D6");
+            audioSource.PlayOneShot(ItemNoises[Random.Range(0, ItemNoises.Length)]);
         }
 
         bool triggerNextLevel = item.EndsLevel;
@@ -298,6 +308,7 @@ public class GameController : MonoBehaviour, ILevelState
 
         if (items.Count == 1 && !GameStats.ExitUnlocked)
         {
+            audioSource.PlayOneShot(SirenNoise);
             GameStats.ExitUnlocked = true;
             foreach (var i in listeners)
             {

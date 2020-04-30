@@ -3,7 +3,14 @@ guid: 746c210beb80ed5499e4460900a3587a
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - LevelCounter: {instanceID: 0}
+  - ScoreCounter: {instanceID: 0}
+  - WinOverlay: {instanceID: 0}
+  - LoseOverlay: {instanceID: 0}
+  - SirenNoise: {instanceID: 0}
+  - EndLevelNoise: {instanceID: 0}
+  - LineShader: {fileID: 4800000, guid: 6ca492857f349d843b34dda2fd4bcb57, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

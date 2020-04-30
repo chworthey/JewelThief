@@ -24,6 +24,7 @@ public class GameController : MonoBehaviour, ILevelState
     public AudioClip[] ItemNoises;
     public AudioClip SirenNoise;
     public AudioClip EndLevelNoise;
+    public Shader LineShader;
 
     // Map data
     private LogicalCellGraph cellGraph = null;
@@ -158,7 +159,7 @@ public class GameController : MonoBehaviour, ILevelState
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = new Material(Shader.Find("SimpleColorLine"));
+        meshRenderer.sharedMaterial = new Material(LineShader);
 
         audioSource = gameObject.GetComponent<AudioSource>();
 

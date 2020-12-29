@@ -29,7 +29,7 @@ Starting in Level 2, your nemesis thief enters play! The only way you can lose i
 
 ## Relevant Code
 
-I would recommend you play the game first, so you understand how the grid system works before jumping in. The code portion that covers the assignment is in:
+I would recommend you play the game first, so you understand how the grid system works before jumping in. The code portion that covered the challenge assignment is in:
 ```
 Assets/Scripts/BehaviorComponents/DijkstraWeightGraph.cs
 ```

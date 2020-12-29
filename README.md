@@ -6,7 +6,7 @@ When I read the interview assigment, [this game from 1997](https://youtu.be/hy9X
 
 I remade most of the assets in the game and reworked the controls to fit the assignment better, and created 19 of the original levels sourced from that YouTube video I linked.
 
-Also, I haven't used Unity that much before! I wanted to see what I could do in such a short time, and I thought that might be interesting for both of us.
+Also, I haven't used Unity that much before! I wanted to see what I could do in such a short time.
 
 ## How to Play
 

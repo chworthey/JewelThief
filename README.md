@@ -1,8 +1,8 @@
-# Harebrained Schemes Question 2
+# I made this for a job interview challenge...
 
 ## Jewel Thief REMAKE!!!
 
-When I read the interview assigment for question 2, [this game from 1997](https://youtu.be/hy9X3ru9YeI) immediately popped into my head for some reason. So I started remaking it a few days ago, and I had so much fun with it, I just had to keep the project going the way it did! And now I'm turning it in.
+When I read the interview assigment, [this game from 1997](https://youtu.be/hy9X3ru9YeI) immediately popped into my head for some reason. So I started remaking it, and I had so much fun with it, I just had to keep the project going the way it did!
 
 I remade most of the assets in the game and reworked the controls to fit the assignment better, and created 19 of the original levels sourced from that YouTube video I linked.
 
@@ -13,7 +13,7 @@ Also, I haven't used Unity that much before! I wanted to see what I could do in 
 ![](./ReadmePics/ScreenShot.png)
 
 ### Premise
-Use the mouse to guide your thief to the treasure! You can only move 6 spaces out. However, I added a rule and that rule is this: you may teleport to a grid space of the same color you are on if you are blocked. Each teleport only counts as 1 space, regardless of how far you jump.
+Use the mouse to guide your thief to the treasure! You can only move 6 spaces out. However, you may teleport to a grid space of the same color you are on if you are blocked. Each teleport only counts as 1 space, regardless of how far you jump.
 
 ### Crossing Colors
 
@@ -49,7 +49,7 @@ I touched on a lot of Unity docs during this time. Besides just learning the bas
 
 Unity's line renderer only supported one continuous shape. I didn't want to add new line renderers to new objects, so I wrote my own line renderer. And it was surprisingly easy!
 
-### Tile Palette <3
+### Tile Palette
 My favorite Unity tool was the tile palette!!! It suited my needs so perfectly, I was able to bang out the 20 levels in just a few hours. I could do the other 20 but my clicking finger is sore.
 
 ### Object Trouble
